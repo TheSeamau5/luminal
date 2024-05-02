@@ -428,7 +428,6 @@ crate::debug_type!(QuantizedGather<T>);
 impl<T: MetalFloat> QuantizedGather<T> {
     fn new(device: Device, queue: CommandQueue, embed_dim: usize) -> Self {
         let type_name = T::type_name();
-        println!("[gather] type {:?}", type_name);
         Self {pipeline: compile_function("metal_gather", &format!(
             "
 #include <metal_stdlib>

@@ -383,12 +383,12 @@ impl<T: MetalFloat> Compiler for ElementwiseFusionCompiler<T> {
                             subexp,
                             &if *val_exp != true {
                                 format!(
-                                    "({} != 0 ? (float)input{i}[{}] : 0.0)$1",
+                                    "({} != 0 ? (half)input{i}[{}] : 0.0)$1",
                                     expr_to_metal_string(val_exp),
                                     expr_to_metal_string(ind_exp)
                                 )
                             } else {
-                                format!("(float)input{i}[{}]$1", expr_to_metal_string(ind_exp))
+                                format!("(half)input{i}[{}]$1", expr_to_metal_string(ind_exp))
                             },
                         )
                         .to_string();
@@ -436,7 +436,7 @@ kernel void mkernel({} device {type_name} *out [[buffer({})]], device uint& n_el
                         .join(" "),
                     inputs.len(),
                     inputs.len() + 1,
-                    op.subexpressions.iter().take(op.subexpressions.len() - 1).enumerate().map(|(i, (subexp, _))| format!("float intermediate{i} = {subexp};")).join("\n        "),
+                    op.subexpressions.iter().take(op.subexpressions.len() - 1).enumerate().map(|(i, (subexp, _))| format!("half intermediate{i} = {subexp};")).join("\n        "),
                     op.subexpressions.last().unwrap().0
                 );
             op.kernel = Some(compile_function("mkernel", &kernel, &device));

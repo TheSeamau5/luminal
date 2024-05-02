@@ -304,11 +304,11 @@ impl<Batch: Dimension, CurSeq: Dimension, PrevSeq: Dimension, TotSeq: Dimension>
 
         // Run through layers and collect new caches
         let mut new_caches = vec![];
-        // let mut new_cache;
-        // for (i, layer) in self.layers.iter().enumerate() {
-        //     (x, new_cache) = layer.forward((x, cache[i], PhantomData::<TotSeq>));
-        //     new_caches.push(new_cache);
-        // }
+        let mut new_cache;
+        for (i, layer) in self.layers.iter().enumerate() {
+            (x, new_cache) = layer.forward((x, cache[i], PhantomData::<TotSeq>));
+            new_caches.push(new_cache);
+        }
         // Run through last norm and output projection
         let output = self.norm.forward(x).matmul(self.lm_head.permute());
 

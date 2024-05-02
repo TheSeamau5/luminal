@@ -56,18 +56,18 @@ kernel void mkernel(device {type_name} *inp [[buffer(0)]], device {type_name} *o
     if (i_ < n_elements) {{
         int a_ = i_ / back_size;
         int b_ = i_ % back_size;
-        float reduce_value = 0.0;
+        {type_name} reduce_value = 0.0;
         for (int c_ = 0; c_ < dim_size; c_++) {{
             int idx = a_ * dim_size * back_size + c_ * back_size + b_;
             if (({valid_exp}) != 0) {{
-                reduce_value += (float)inp[{idx_exp}];
+                reduce_value += ({type_name})inp[{idx_exp}];
             }}
         }}
-        out[i_] = ({type_name})(reduce_value / (float)dim_size);
+        out[i_] = ({type_name})(reduce_value / ({type_name})dim_size);
     }}
 }}");
         code = code.replace("mkernel", "kernel_mean_reduce");
-
+        println!("[MetalMeanReduce]\n{:?}", code);
         Self(
             compile_function("kernel_mean_reduce", &code, &dev),
             queue,
@@ -241,6 +241,7 @@ impl<T> PartialEq for MetalStdNorm<T> {
 impl<T: MetalFloat> MetalStdNorm<T> {
     fn new(epsilon: f32, device: Device, queue: CommandQueue) -> Self {
         let type_name = T::type_name();
+        let type_suffix = T::type_suffix();
         let kernel_code = format!("#include <metal_stdlib>
 #define SIMD_WIDTH 32
 
@@ -250,7 +251,7 @@ kernel void kernel_std_norm(
         device       {type_name} * dst [[buffer(1)]],
         constant   int64_t & row_size [[buffer(2)]],
         constant     float & eps [[buffer(3)]],
-        threadgroup float  * buf [[threadgroup(0)]],
+        threadgroup {type_name}  * buf [[threadgroup(0)]],
         uint threadgroup_position_in_grid[[threadgroup_position_in_grid]],
         uint thread_position_in_threadgroup[[thread_position_in_threadgroup]],
         uint simdgroup_index_in_threadgroup[[simdgroup_index_in_threadgroup]],
@@ -258,18 +259,18 @@ kernel void kernel_std_norm(
         uint threads_per_threadgroup[[threads_per_threadgroup]]) {{
     device const {type_name}4 * x = (device const {type_name}4 *) (src0 + threadgroup_position_in_grid * row_size);
 
-    float4 sumf = 0;
+    {type_name}4 sumf = 0;
 
     // parallel sum
     for (int i = thread_position_in_threadgroup; i < row_size/4; i += threads_per_threadgroup) {{
-        sumf += (float4)x[i] * (float4)x[i];
+        sumf += ({type_name}4)x[i] * ({type_name}4)x[i];
     }}
-    float all_sum = sumf[0] + sumf[1] + sumf[2] + sumf[3];
+    {type_name} all_sum = sumf[0] + sumf[1] + sumf[2] + sumf[3];
     all_sum = simd_sum(all_sum);
 
     if (threads_per_threadgroup > SIMD_WIDTH) {{
         if (simdgroup_index_in_threadgroup == 0) {{
-            buf[thread_index_in_simdgroup] = 0.0f;
+            buf[thread_index_in_simdgroup] = 0.0{type_suffix};
         }}
 
         threadgroup_barrier(mem_flags::mem_threadgroup);
@@ -284,14 +285,15 @@ kernel void kernel_std_norm(
         all_sum = simd_sum(all_sum);
     }}
 
-    const float mean  = all_sum / row_size;
-    const float scale = rsqrt(mean + eps);
+    const {type_name} mean  = all_sum / row_size;
+    const {type_name} scale = rsqrt(mean + ({type_name})eps);
 
     device {type_name}4 * y = (device {type_name}4 *) (dst + threadgroup_position_in_grid * row_size);
     for (int i = thread_position_in_threadgroup; i < row_size/4; i += threads_per_threadgroup) {{
         y[i] = ({type_name}4)(x[i] * scale);
     }}
 }}");
+        println!("[MetalStdNorm]\n{:?}", kernel_code);
 
         Self {
             pipeline: compile_function("kernel_std_norm", &kernel_code, &device),
@@ -336,7 +338,7 @@ impl<T> MetalKernel for MetalStdNorm<T> {
         while nth < row_size / 4 && nth < 1024 {
             nth *= 2;
         }
-        encoder.set_threadgroup_memory_length(0, 32 * size_of::<f32>() as u64);
+        encoder.set_threadgroup_memory_length(0, 32 * size_of::<f16>() as u64);
         encoder.dispatch_thread_groups(
             MTLSize {
                 width: batch_size as u64,

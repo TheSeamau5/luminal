@@ -476,7 +476,7 @@ impl<T: MetalFloat> MetalSin<T> {
 using namespace metal;
 kernel void mkernel(device {type_name} *inp [[buffer(0)]], device {type_name} *out [[buffer(1)]], device int& n_elements [[buffer(2)]], uint idx [[thread_position_in_grid]]{rendered}) {{
     if (idx < n_elements && {valid_exp} != 0) {{
-        out[idx] = ({type_name})sin((float)inp[{idx_exp}]);
+        out[idx] = ({type_name})sin(({type_name})inp[{idx_exp}]);
     }}
 }}");
         Self {
@@ -1136,7 +1136,7 @@ impl<T: MetalFloat> Operator for MetalLessThan<T> {
             )))));
         }
         if key == "elementwise" {
-            return Some(Box::new("(float)((input0) < (input1))".to_string()));
+            return Some(Box::new("({type_name})((input0) < (input1))".to_string()));
         }
         None
     }
@@ -1175,6 +1175,7 @@ kernel void mkernel(device {type_name} *inp_a [[buffer(0)]], device {type_name} 
     }}
 }}
 ");
+        println!("[MetalMod]\n{:?}", code);
         Self {
             pipeline: compile_function("mkernel", &code, &device),
             queue,
@@ -1306,6 +1307,7 @@ kernel void mkernel(device {type_name} *inp [[buffer(0)]], device {type_name} *o
     }}
 }}
 ");
+        println!("[MetalSumReduce]\n{:?}", code);
         Self {
             pipeline: compile_function("mkernel", &code, &device),
             queue,
@@ -1447,12 +1449,12 @@ kernel void mkernel(device {type_name} *inp [[buffer(0)]], device {type_name} *o
     if (i_ < n_elements) {{
         int a_ = i_ / back_size;
         int b_ = i_ % back_size;
-        float reduce_value = -0x7f800000;
+        half reduce_value = -MAXHALF;
         for (int c_ = 0; c_ < dim_size; c_++) {{
             uint idx = a_ * dim_size * back_size + c_ * back_size + b_;
             if (({valid_exp}) != 0) {{
                 int a_idx = {idx_exp};
-                reduce_value = max(reduce_value, (float)inp[a_idx]);
+                reduce_value = max(reduce_value, ({type_name})inp[a_idx]);
             }}
         }}
         out[i_] = ({type_name})reduce_value;
