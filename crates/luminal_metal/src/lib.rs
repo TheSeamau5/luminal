@@ -79,6 +79,7 @@ pub trait MetalFloat: Copy + Debug + PartialEq + 'static + Default {
     fn from_f32(a: f32) -> Self;
     fn is_f32() -> bool;
     fn type_name() -> &'static str;
+    fn type_suffix() -> &'static str;
 }
 
 // Quantization types
@@ -117,6 +118,9 @@ impl MetalFloat for f32 {
     fn type_name() -> &'static str {
         "float"
     }
+    fn type_suffix() -> &'static str {
+        "f"
+    }
 }
 
 impl MetalFloat for f16 {
@@ -131,6 +135,10 @@ impl MetalFloat for f16 {
     }
     fn type_name() -> &'static str {
         "half"
+    }
+
+    fn type_suffix() -> &'static str {
+        "h"
     }
 }
 

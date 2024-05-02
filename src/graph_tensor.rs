@@ -94,15 +94,15 @@ impl<S: Shape> GraphTensor<S> {
     }
 
     /// Get the contiguous data of the tensor
-    pub fn data(&self) -> Vec<f32> {
+    pub fn data(&self) -> Vec<f16> {
         let tensor = self.graph().get_tensor_ref(self.id, 0).unwrap();
-        let orig_data = tensor.downcast_ref::<Vec<f32>>().unwrap();
+        let orig_data = tensor.downcast_ref::<Vec<f16>>().unwrap();
         let mut st = self.shape;
         if !st.is_reshaped() {
             return orig_data.clone();
         }
         st.resolve_global_dyn_dims(&self.graph().dyn_map);
-        let mut data = vec![0.; st.n_elements().to_usize().unwrap()];
+        let mut data = vec![f16::from_f32(0.); st.n_elements().to_usize().unwrap()];
         let (ind, val) = (st.index_expression(), st.valid_expression());
         #[allow(unused_mut)]
         for (i, mut r) in data.iter_mut().enumerate() {
@@ -133,7 +133,7 @@ impl<S: ConstShape> GraphTensor<S> {
 
 fn pretty_print_tensor_recursive(
     f: &mut std::fmt::Formatter<'_>,
-    data: &[f32],
+    data: &[f16],
     shape: &[usize],
     level: usize,
 ) -> std::fmt::Result {

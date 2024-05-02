@@ -43,7 +43,7 @@ fn main() {
     let mut cache_src: Vec<KVCache<Const<1>, Dyn<'p'>>> = (0..model::NUM_LAYERS)
         .map(|_| (cx.named_tensor("Key Cache"), cx.named_tensor("Value Cache")))
         .collect();
-    cache_src.set_dyn(vec![], &[1, model::N_KV_HEADS, 0, model::HEAD_DIM]);
+    cache_src.set_dyn::<Vec<f16>>(vec![], &[1, model::N_KV_HEADS, 0, model::HEAD_DIM]);
     let model = model::MistralLM::initialize(&mut cx);
     let mut model_weights = params(&model);
     cx.keep_tensors(&model_weights);
@@ -89,7 +89,7 @@ fn main() {
     print!("Loading model");
     io::stdout().flush().unwrap();
     let now = Instant::now();
-    input.set_dyn(vec![1.], &[1, 1]);
+    input.set_dyn(vec![f16::from_f32(1.0)], &[1, 1]);
     cx.set_dyn_dim('t', 1);
     cx.execute();
     logits.drop();
@@ -107,7 +107,10 @@ fn main() {
         .to_vec();
     input_ids.insert(0, 1);
     input.set_dyn(
-        input_ids.iter().map(|i| *i as f32).collect::<Vec<_>>(),
+        input_ids
+            .iter()
+            .map(|i| f16::from_f32(*i as f32))
+            .collect::<Vec<_>>(),
         &[1, input_ids.len()],
     );
     cx.set_dyn_dim('t', input_ids.len());
@@ -177,7 +180,7 @@ fn main() {
 }
 
 // Currently just an argmax, do actual sampling here
-fn sample_index(dist: &[f32]) -> u32 {
+fn sample_index(dist: &[f16]) -> u32 {
     dist.iter()
         .position_max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
         .unwrap() as u32

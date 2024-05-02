@@ -6,7 +6,8 @@ use luminal_nn::{Embedding, PermutedLinear, RMSNorm};
 // Llama3 8B Config
 pub const VOCAB_SIZE: usize = 128256;
 pub const HIDDEN_DIM: usize = 4096;
-pub const NUM_LAYERS: usize = 32;
+// pub const NUM_LAYERS: usize = 32;
+pub const NUM_LAYERS: usize = 1;
 pub const N_HEADS: usize = 32;
 pub const N_KV_HEADS: usize = 8;
 pub const MLP_DIM: usize = 14336;
@@ -303,11 +304,11 @@ impl<Batch: Dimension, CurSeq: Dimension, PrevSeq: Dimension, TotSeq: Dimension>
 
         // Run through layers and collect new caches
         let mut new_caches = vec![];
-        let mut new_cache;
-        for (i, layer) in self.layers.iter().enumerate() {
-            (x, new_cache) = layer.forward((x, cache[i], PhantomData::<TotSeq>));
-            new_caches.push(new_cache);
-        }
+        // let mut new_cache;
+        // for (i, layer) in self.layers.iter().enumerate() {
+        //     (x, new_cache) = layer.forward((x, cache[i], PhantomData::<TotSeq>));
+        //     new_caches.push(new_cache);
+        // }
         // Run through last norm and output projection
         let output = self.norm.forward(x).matmul(self.lm_head.permute());
 
